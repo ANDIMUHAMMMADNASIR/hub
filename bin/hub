@@ -1,7 +1,0 @@
-#!/usr/bin/env ruby
-
-# hub(1)
-# alias git=hub
-
-require 'hub'
-Hub::Runner.execute(*ARGV)

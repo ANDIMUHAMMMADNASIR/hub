@@ -1,36 +1,47 @@
 require 'aruba/cucumber'
 require 'fileutils'
 require 'forwardable'
+require 'tmpdir'
 
 system_git = `which git 2>/dev/null`.chomp
-lib_dir = File.expand_path('../../../lib', __FILE__)
 bin_dir = File.expand_path('../fakebin', __FILE__)
+hub_dir = Dir.mktmpdir('hub_build')
+raise 'hub build failed' unless system("./script/build -o #{hub_dir}/hub")
 
 Before do
-  # don't want hub to run in bundle
-  unset_bundler_env_vars
-  # have bin/hub load code from the current project
-  set_env 'RUBYLIB', lib_dir
   # speed up load time by skipping RubyGems
   set_env 'RUBYOPT', '--disable-gems' if RUBY_VERSION > '1.9'
   # put fakebin on the PATH
-  set_env 'PATH', "#{bin_dir}:#{ENV['PATH']}"
+  set_env 'PATH', "#{hub_dir}:#{bin_dir}:#{ENV['PATH']}"
   # clear out GIT if it happens to be set
   set_env 'GIT', nil
   # exclude this project's git directory from use in testing
-  set_env 'GIT_CEILING_DIRECTORIES', File.dirname(lib_dir)
+  set_env 'GIT_CEILING_DIRECTORIES', File.expand_path('../../..', __FILE__)
   # sabotage git commands that might try to access a remote host
   set_env 'GIT_PROXY_COMMAND', 'echo'
   # avoids reading from current user's "~/.gitconfig"
   set_env 'HOME', File.expand_path(File.join(current_dir, 'home'))
+  set_env 'TMPDIR', File.expand_path(File.join(current_dir, 'tmp'))
+  # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html#variables
+  set_env 'XDG_CONFIG_HOME', nil
+  set_env 'XDG_CONFIG_DIRS', nil
   # used in fakebin/git
   set_env 'HUB_SYSTEM_GIT', system_git
   # ensure that api.github.com is actually never hit in tests
-  set_env 'HUB_TEST_HOST', '127.0.0.1:0'
+  set_env 'HUB_TEST_HOST', 'http://127.0.0.1:0'
   # ensure we use fakebin `open` to test browsing
   set_env 'BROWSER', 'open'
   # sabotage opening a commit message editor interactively
   set_env 'GIT_EDITOR', 'false'
+  # reset current localization settings
+  set_env 'LANG', nil
+  set_env 'LANGUAGE', nil
+  set_env 'LC_ALL', 'en_US.UTF-8'
+  # ignore current user's token
+  set_env 'GITHUB_TOKEN', nil
+  set_env 'GITHUB_USER', nil
+  set_env 'GITHUB_PASSWORD', nil
+  set_env 'GITHUB_HOST', nil
 
   author_name  = "Hub"
   author_email = "hub@test.local"
@@ -39,16 +50,16 @@ Before do
   set_env 'GIT_AUTHOR_EMAIL',    author_email
   set_env 'GIT_COMMITTER_EMAIL', author_email
 
+  set_env 'HUB_VERSION', 'dev'
+  set_env 'HUB_REPORT_CRASH', 'never'
+  set_env 'HUB_PROTOCOL', nil
+
   FileUtils.mkdir_p ENV['HOME']
 
   # increase process exit timeout from the default of 3 seconds
-  @aruba_timeout_seconds = 5
-
-  if defined?(RUBY_ENGINE) and RUBY_ENGINE == 'jruby'
-    @aruba_io_wait_seconds = 0.1
-  else
-    @aruba_io_wait_seconds = 0.02
-  end
+  @aruba_timeout_seconds = 10
+  # don't be "helpful"
+  @aruba_keep_ansi = true
 end
 
 After do
@@ -61,7 +72,7 @@ RSpec::Matchers.define :be_successful_command do
     cmd.success?
   end
 
-  failure_message_for_should do |cmd|
+  failure_message do |cmd|
     %(command "#{cmd}" exited with status #{cmd.status}:) <<
       cmd.output.gsub(/^/, ' ' * 2)
   end
@@ -96,6 +107,14 @@ class SimpleCommand
 end
 
 World Module.new {
+  # If there are multiple inputs, e.g., type in username and then type in password etc.,
+  # the Go program will freeze on the second input. Giving it a small time interval
+  # temporarily solves the problem.
+  # See https://github.com/cucumber/aruba/blob/7afbc5c0cbae9c9a946d70c4c2735ccb86e00f08/lib/aruba/api.rb#L379-L382
+  def type(*args)
+    super.tap { sleep 0.1 }
+  end
+
   def history
     histfile = File.join(ENV['HOME'], '.history')
     if File.exist? histfile
@@ -107,7 +126,7 @@ World Module.new {
 
   def assert_command_run cmd
     cmd += "\n" unless cmd[-1..-1] == "\n"
-    history.should include(cmd)
+    expect(history).to include(cmd)
   end
 
   def edit_hub_config
@@ -133,17 +152,37 @@ World Module.new {
   def run_silent cmd
     in_current_dir do
       command = SimpleCommand.run(cmd)
-      command.should be_successful_command
+      expect(command).to be_successful_command
       command.output
     end
   end
 
-  def empty_commit
-    run_silent "git commit --quiet -m empty --allow-empty"
+  def empty_commit(message = nil)
+    unless message
+      @empty_commit_count = defined?(@empty_commit_count) ? @empty_commit_count + 1 : 1
+      message = "empty #{@empty_commit_count}"
+    end
+    run_silent "git commit --quiet -m '#{message}' --allow-empty"
   end
 
   # Aruba unnecessarily creates new Announcer instance on each invocation
   def announcer
     @announcer ||= super
+  end
+
+  def shell_escape(message)
+    message.to_s.gsub(/['"\\ $]/) { |m| "\\#{m}" }
+  end
+
+  %w[output_from stdout_from stderr_from all_stdout all_stderr].each do |m|
+    define_method(m) do |*args|
+      home = ENV['HOME'].to_s
+      output = super(*args)
+      if home.empty?
+        output
+      else
+        output.gsub(home, '$HOME')
+      end
+    end
   end
 }

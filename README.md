@@ -1,134 +1,126 @@
-git + hub = github
-==================
-
 hub is a command line tool that wraps `git` in order to extend it with extra
 features and commands that make working with GitHub easier.
 
-~~~ sh
+This repository and its issue tracker is **not for reporting problems with
+GitHub.com** web interface. If you have a problem with GitHub itself, please
+[contact Support](https://github.com/contact).
+
+Usage
+-----
+
+``` sh
 $ hub clone rtomayko/tilt
 
 # expands to:
 $ git clone git://github.com/rtomayko/tilt.git
-~~~
+```
 
-hub is best aliased as `git`, so you can type `$ git <command>` in the shell and
-get all the usual `hub` features. See "Aliasing" below.
+hub can be safely [aliased](#aliasing) as `git` so you can type `$ git
+<command>` in the shell and get all the usual `hub` features.
 
+See [Usage documentation](https://hub.github.com/hub.1.html) for the list of all
+commands and their arguments.
+
+Hub can also be used to make shell scripts that [manually interface with the
+GitHub API](https://hub.github.com/hub-api.1.html).
 
 Installation
 ------------
 
-Dependencies:
+The `hub` executable has no dependencies, but since it was designed to wrap
+`git`, it's recommended to have at least **git 1.7.3** or newer.
 
-* **git 1.7.3** or newer
-* **Ruby 1.8.6** or newer
+#### Homebrew
 
-### Homebrew
+`hub` can be installed through [Homebrew/Linuxbrew](https://docs.brew.sh/Installation):
 
-Installing on OS X is easiest with Homebrew:
-
-~~~ sh
+``` sh
 $ brew install hub
-~~~
-
-### `rake install` from source
-
-This is the preferred installation method when no package manager that
-supports hub is available:
-
-~~~ sh
-# Download or clone the project from GitHub:
-$ git clone git://github.com/github/hub.git
-$ cd hub
-$ rake install
-~~~
-
-On a Unix-based OS, this installs under `PREFIX`, which is `/usr/local` by default.
-
-Now you should be ready to roll:
-
-~~~ sh
 $ hub version
 git version 1.7.6
-hub version 1.8.3
-~~~
+hub version 2.2.3
+```
 
-#### Windows "Git Bash" (msysGit) note
+#### Windows
 
-Avoid aliasing hub as `git` due to the fact that msysGit automatically
-configures your prompt to include git information, and you want to avoid slowing
-that down. See [Is your shell prompt slow?](#is-your-shell-prompt-slow)
+`hub` can be installed through [Scoop](http://scoop.sh/) on Windows:
 
-### RubyGems
+``` sh
+> scoop install hub
+```
 
-Though not recommended, hub can also be installed as a RubyGem:
+or alternatively `hub` can be installed through [Chocolatey](https://chocolatey.org/):
 
-~~~ sh
-$ gem install hub
-~~~
+``` sh
+> choco install hub
+```
 
-(It's not recommended for casual use because of the RubyGems startup
-time. See [this gist][speed] for information.)
+#### Fedora Linux
 
-#### Standalone via RubyGems
+On Fedora you can install `hub` through DNF:
 
-~~~ sh
-$ gem install hub
-$ hub hub standalone > ~/bin/hub && chmod +x ~/bin/hub
-~~~
+``` sh
+$ sudo dnf install hub
+$ hub version
+git version 2.9.3
+hub version 2.2.9
+```
 
-This installs a standalone version which doesn't require RubyGems to
-run, so it's faster.
+#### Arch Linux
 
-### Help! It's slow!
+On Arch Linux you can install `hub` from the official repository:
 
-#### Is `hub` noticeably slower than plain git?
+```sh
+$ sudo pacman -S hub
+```
 
-That is inconvenient, especially if you want to alias hub as `git`. Few things
-you can try:
+#### FreeBSD
 
-* Find out which ruby is used for the hub executable:
+On FreeBSD you can install a prebuilt `hub` package with
+[pkg(8)](http://man.freebsd.org/pkg/8):
 
-    ``` sh
-    head -1 `which hub`
-    ```
+```console
+# pkg install hub
+```
 
-* That ruby should be speedy. Time it with:
+#### Debian
 
-    ``` sh
-    time /usr/bin/ruby -e0
-    #=> it should be below 0.01 s total
-    ```
+On Debian (versions sid and buster) you can install `hub` from the official repository:
 
-* Check that Ruby isn't loading something shady:
+```sh
+$ sudo apt install hub
+```
 
-    ``` sh
-    echo $RUBYOPT
-    ```
+#### Standalone
 
-* Check your [GC settings][gc]
+`hub` can be easily installed as an executable. Download the latest
+[compiled binaries](https://github.com/github/hub/releases) and put it anywhere
+in your executable path.
 
-General recommendation: you should change hub's shebang line to run with system
-ruby (usually `/usr/bin/ruby`) instead of currently active ruby (`/usr/bin/env
-ruby`). Also, Ruby 1.8 is speedier than 1.9.
+#### Source
 
-#### Is your shell prompt slow?
+With your [GOPATH](https://github.com/golang/go/wiki/GOPATH) already set up:
 
-Does your prompt show git information? Hub may be slowing down your prompt.
+```sh
+mkdir -p "$GOPATH"/src/github.com/github
+git clone \
+  --config transfer.fsckobjects=false \
+  --config receive.fsckobjects=false \
+  --config fetch.fsckobjects=false \
+  https://github.com/github/hub.git "$GOPATH"/src/github.com/github/hub
+cd "$GOPATH"/src/github.com/github/hub
+make install prefix=/usr/local
+```
 
-This can happen if you've aliased hub as `git`. This is fine when you use `git`
-manually, but may be unacceptable for your prompt, which doesn't need hub
-features anyway!
+Prerequisites for compilation are:
 
-The solution is to identify which shell functions are calling `git`, and replace
-each occurrence of that with `command git`. This is a shell feature that enables
-you to call a command directly and skip aliases and functions wrapping it.
-
+* `make`
+* [Go 1.9+](http://golang.org/doc/install)
 
 Aliasing
 --------
 
-Using hub feels best when it's aliased as `git`. This is not dangerous; your
+Some hub features feel best when it's aliased as `git`. This is not dangerous; your
 _normal git commands will all work_. hub merely adds some sugar.
 
 `hub alias` displays instructions for the current shell. With the `-s` flag, it
@@ -136,250 +128,48 @@ outputs a script suitable for `eval`.
 
 You should place this command in your `.bash_profile` or other startup script:
 
-~~~ sh
+``` sh
 eval "$(hub alias -s)"
-~~~
+```
+
+#### PowerShell
+
+If you're using PowerShell, you can set an alias for `hub` by placing the
+following in your PowerShell profile (usually
+`~/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1`):
+
+``` sh
+Set-Alias git hub
+```
+
+A simple way to do this is to run the following from the PowerShell prompt:
+
+``` sh
+Add-Content $PROFILE "`nSet-Alias git hub"
+```
+
+Note: You'll need to restart your PowerShell console in order for the changes to be picked up.
+
+If your PowerShell profile doesn't exist, you can create it by running the following:
+
+``` sh
+New-Item -Type file -Force $PROFILE
+```
 
 ### Shell tab-completion
 
-hub repository contains tab-completion scripts for bash and zsh. These scripts
-complement existing completion scripts that ship with git.
+hub repository contains tab-completion scripts for bash, zsh and fish.
+These scripts complement existing completion scripts that ship with git.
+
+[Installation instructions](etc)
 
 * [hub bash completion](https://github.com/github/hub/blob/master/etc/hub.bash_completion.sh)
 * [hub zsh completion](https://github.com/github/hub/blob/master/etc/hub.zsh_completion)
-
-
-Commands
---------
-
-Assuming you've aliased hub as `git`, the following commands now have
-superpowers:
-
-### git clone
-
-    $ git clone schacon/ticgit
-    > git clone git://github.com/schacon/ticgit.git
-
-    $ git clone -p schacon/ticgit
-    > git clone git@github.com:schacon/ticgit.git
-
-    $ git clone resque
-    > git clone git@github.com/YOUR_USER/resque.git
-
-### git remote add
-
-    $ git remote add rtomayko
-    > git remote add rtomayko git://github.com/rtomayko/CURRENT_REPO.git
-
-    $ git remote add -p rtomayko
-    > git remote add rtomayko git@github.com:rtomayko/CURRENT_REPO.git
-
-    $ git remote add origin
-    > git remote add origin git://github.com/YOUR_USER/CURRENT_REPO.git
-
-### git fetch
-
-    $ git fetch mislav
-    > git remote add mislav git://github.com/mislav/REPO.git
-    > git fetch mislav
-
-    $ git fetch mislav,xoebus
-    > git remote add mislav ...
-    > git remote add xoebus ...
-    > git fetch --multiple mislav xoebus
-
-### git cherry-pick
-
-    $ git cherry-pick http://github.com/mislav/REPO/commit/SHA
-    > git remote add -f mislav git://github.com/mislav/REPO.git
-    > git cherry-pick SHA
-
-    $ git cherry-pick mislav@SHA
-    > git remote add -f mislav git://github.com/mislav/CURRENT_REPO.git
-    > git cherry-pick SHA
-
-    $ git cherry-pick mislav@SHA
-    > git fetch mislav
-    > git cherry-pick SHA
-
-### git am, git apply
-
-    $ git am https://github.com/defunkt/hub/pull/55
-    [ downloads patch via API ]
-    > git am /tmp/55.patch
-
-    $ git am --ignore-whitespace https://github.com/davidbalbert/hub/commit/fdb9921
-    [ downloads patch via API ]
-    > git am --ignore-whitespace /tmp/fdb9921.patch
-
-    $ git apply https://gist.github.com/8da7fb575debd88c54cf
-    [ downloads patch via API ]
-    > git apply /tmp/gist-8da7fb575debd88c54cf.txt
-
-### git fork
-
-    $ git fork
-    [ repo forked on GitHub ]
-    > git remote add -f YOUR_USER git@github.com:YOUR_USER/CURRENT_REPO.git
-
-### git pull-request
-
-    # while on a topic branch called "feature":
-    $ git pull-request
-    [ opens text editor to edit title & body for the request ]
-    [ opened pull request on GitHub for "YOUR_USER:feature" ]
-
-    # explicit title, pull base & head:
-    $ git pull-request -m "Implemented feature X" -b defunkt:master -h mislav:feature
-
-### git checkout
-
-    $ git checkout https://github.com/defunkt/hub/pull/73
-    > git remote add -f -t feature git://github:com/mislav/hub.git
-    > git checkout --track -B mislav-feature mislav/feature
-
-    $ git checkout https://github.com/defunkt/hub/pull/73 custom-branch-name
-
-### git merge
-
-    $ git merge https://github.com/defunkt/hub/pull/73
-    > git fetch git://github.com/mislav/hub.git +refs/heads/feature:refs/remotes/mislav/feature
-    > git merge mislav/feature --no-ff -m 'Merge pull request #73 from mislav/feature...'
-
-### git create
-
-    $ git create
-    [ repo created on GitHub ]
-    > git remote add origin git@github.com:YOUR_USER/CURRENT_REPO.git
-
-    # with description:
-    $ git create -d 'It shall be mine, all mine!'
-
-    $ git create recipes
-    [ repo created on GitHub ]
-    > git remote add origin git@github.com:YOUR_USER/recipes.git
-
-    $ git create sinatra/recipes
-    [ repo created in GitHub organization ]
-    > git remote add origin git@github.com:sinatra/recipes.git
-
-### git init
-
-    $ git init -g
-    > git init
-    > git remote add origin git@github.com:YOUR_USER/REPO.git
-
-### git push
-
-    $ git push origin,staging,qa bert_timeout
-    > git push origin bert_timeout
-    > git push staging bert_timeout
-    > git push qa bert_timeout
-
-### git browse
-
-    $ git browse
-    > open https://github.com/YOUR_USER/CURRENT_REPO
-
-    $ git browse -- commit/SHA
-    > open https://github.com/YOUR_USER/CURRENT_REPO/commit/SHA
-
-    $ git browse -- issues
-    > open https://github.com/YOUR_USER/CURRENT_REPO/issues
-
-    $ git browse schacon/ticgit
-    > open https://github.com/schacon/ticgit
-
-    $ git browse schacon/ticgit commit/SHA
-    > open https://github.com/schacon/ticgit/commit/SHA
-
-    $ git browse resque
-    > open https://github.com/YOUR_USER/resque
-
-    $ git browse resque network
-    > open https://github.com/YOUR_USER/resque/network
-
-### git compare
-
-    $ git compare refactor
-    > open https://github.com/CURRENT_REPO/compare/refactor
-
-    $ git compare 1.0..1.1
-    > open https://github.com/CURRENT_REPO/compare/1.0...1.1
-
-    $ git compare -u fix
-    > (https://github.com/CURRENT_REPO/compare/fix)
-
-    $ git compare other-user patch
-    > open https://github.com/other-user/REPO/compare/patch
-
-### git submodule
-
-    $ git submodule add wycats/bundler vendor/bundler
-    > git submodule add git://github.com/wycats/bundler.git vendor/bundler
-
-    $ git submodule add -p wycats/bundler vendor/bundler
-    > git submodule add git@github.com:wycats/bundler.git vendor/bundler
-
-    $ git submodule add -b ryppl --name pip ryppl/pip vendor/pip
-    > git submodule add -b ryppl --name pip git://github.com/ryppl/pip.git vendor/pip
-
-### git ci-status
-
-    $ git ci-status [commit]
-    > (prints CI state of commit and exits with appropriate code)
-    > One of: success (0), error (1), failure (1), pending (2), no status (3)
-
-
-### git help
-
-    $ git help
-    > (improved git help)
-    $ git help hub
-    > (hub man page)
-
-
-Configuration
--------------
-
-### GitHub OAuth authentication
-
-Hub will prompt for GitHub username & password the first time it needs to access
-the API and exchange it for an OAuth token, which it saves in "~/.config/hub".
-
-### HTTPS instead of git protocol
-
-If you prefer using the HTTPS protocol for GitHub repositories instead of the git
-protocol for read and ssh for write, you can set "hub.protocol" to "https".
-
-~~~ sh
-# default behavior
-$ git clone defunkt/repl
-< git clone >
-
-# opt into HTTPS:
-$ git config --global hub.protocol https
-$ git clone defunkt/repl
-< https clone >
-~~~
-
+* [hub fish completion](https://github.com/github/hub/blob/master/etc/hub.fish_completion)
 
 Meta
 ----
 
 * Home: <https://github.com/github/hub>
 * Bugs: <https://github.com/github/hub/issues>
-* Gem: <https://rubygems.org/gems/hub>
 * Authors: <https://github.com/github/hub/contributors>
-
-### Prior art
-
-These projects also aim to either improve git or make interacting with
-GitHub simpler:
-
-* [eg](http://www.gnome.org/~newren/eg/)
-* [github-gem](https://github.com/defunkt/github-gem)
-
-
-[speed]: http://gist.github.com/284823
-[gc]: https://twitter.com/brynary/status/49560668994674688
